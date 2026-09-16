@@ -187,8 +187,15 @@
       fetch(CONFIG.supabase.url + "/rest/v1/items?select=*&order=sort_order", {
         headers: { apikey: CONFIG.supabase.anonKey, Authorization: "Bearer " + CONFIG.supabase.anonKey }
       }).then(function(res){ return res.json(); })
-        .then(function(data){ cb(data || []); })
-        .catch(function(){ cb(null); });
+        .then(function(rows){
+          if (!rows || !rows.length || rows.error){ cb(seed(), true); return; }
+          cb(rows.map(function(r){
+            return { id: r.id, section: r.section, nom: r.nom, desc: r.descr || "",
+                     prix: r.prix || "", detail: r.detail || "", badge: r.badge || "",
+                     rupture: !!r.rupture };
+          }));
+        })
+        .catch(function(){ cb(seed(), true); });
       return;
     }
     // local / démo
@@ -237,11 +244,14 @@
     menu.innerHTML = html;
   }
 
-  getItems(function(items){
+  getItems(function(items, fromFallback){
     if (!items){
       document.getElementById("menu").innerHTML =
         '<p class="empty">Impossible de charger la carte (vérifier la config).</p>';
       return;
+    }
+    if (fromFallback){
+      console.warn("Carte affichée depuis la copie embarquée — Supabase injoignable.");
     }
     render(items);
   });
